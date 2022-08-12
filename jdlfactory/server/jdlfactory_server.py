@@ -30,4 +30,14 @@ ijob = int(ad.get('ProcId', -1))
 data_json_file = osp.join(iwd, 'data.json')
 with open(data_json_file, 'r') as f:
     group = json.load(f)
-data = group['jobs'][ijob]['data']
+
+
+class DotDict(dict):
+    """
+    Small class that allows accessing keys via the dot (.) as well.
+    Assumes data won't be changed.
+    """
+    def __init__(self, dct):
+        super(DotDict, self).__init__(dct)
+        self.__dict__.update(dct)
+data = DotDict(group['jobs'][ijob]['data'])

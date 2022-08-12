@@ -19,7 +19,6 @@ def capture_stdout():
         sys.stdout = old_stdout
 
 
-
 def test_hello_world():
     output = jdlfactory.produce('print("Hello World!")')
     assert output.jdl == (

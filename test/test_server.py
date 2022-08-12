@@ -10,5 +10,6 @@ def test_main_scope_server_attributes():
         import jdlfactory_server as srv
         assert srv.ijob == 0
         assert srv.data == dict(foo='FOO')
+        assert srv.data.foo == 'FOO'
 
 
