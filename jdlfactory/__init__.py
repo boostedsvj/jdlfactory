@@ -140,6 +140,7 @@ def simulated_job(group, keep_temp_dir=False, ijob=0):
         sys.path.append(server_path)
         # Create the temporary directory representing the workdir of the job
         tmpdir = tempfile.mkdtemp('test')
+        logger.info('Simulating job in %s', tmpdir)
         # Create the .job.ad file
         jobad_path = osp.join(tmpdir, '.job.ad')
         with open(jobad_path, 'w') as f:
