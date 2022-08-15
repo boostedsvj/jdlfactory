@@ -46,6 +46,11 @@ class Group(object):
         self.jobs = []
         self.plugins = []
 
+    @classmethod
+    def from_file(cls, filename):
+        with open(filename, 'r') as f:
+            return cls(f.read())
+
     @property
     def njobs(self):
         return max(1, len(self.jobs))
