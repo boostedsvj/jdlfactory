@@ -15,7 +15,7 @@ setup(
     author        = 'Thomas Klijnsma',
     author_email  = 'tklijnsm@gmail.com',
     packages      = ['jdlfactory'],
-    package_data  = {'jdlfactory': ['include/*']},
+    package_data  = {'jdlfactory': ['include/*', 'server/*']},
     include_package_data = True,
     zip_safe      = False,
     scripts       = []
