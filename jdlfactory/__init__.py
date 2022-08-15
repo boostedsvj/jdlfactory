@@ -132,11 +132,11 @@ class Group(object):
 
 
 @contextmanager
-def simulated_job(group, keep_temp_dir=False, ijob=0):
+def simulated_job(group, keep_temp_dir=False, ijob=0, tag='_test'):
     server_path = osp.join(osp.dirname(osp.abspath(__file__)), 'server')
     try:
         # Create the temporary directory representing the workdir of the job
-        tmpdir = tempfile.mkdtemp('test')
+        tmpdir = tempfile.mkdtemp(tag)
         logger.info('Simulating job in %s', tmpdir)
         # Make sure jdlfactory_server is importable
         old_path = sys.path[:]
