@@ -93,3 +93,23 @@ def test_run_jobs_with_different_data():
     finally:
         os.chdir(cwd)
         if osp.isdir('testjobs'): shutil.rmtree('testjobs')
+
+
+@pytest.mark.realjobs
+def test_venv():
+    group = jdlfactory.Group('import seutils; print(seutils)')
+    group.venv()
+    group.sh('pip install seutils')
+    try:
+        if osp.isdir('testjobs'): shutil.rmtree('testjobs')
+        group.prepare_for_jobs('testjobs')
+        os.chdir('testjobs')
+        submit('submit.jdl', wait=True)
+        with open(glob.glob('out_*.txt')[0]) as f:
+            lastline = f.readlines()[-1]
+        assert re.match(
+            r"<module 'seutils' from '.*/venv/lib/python\d.\d/site-packages/seutils/__init__.pyc'>",
+            lastline
+            )
+    finally:
+        if osp.isdir('testjobs'): shutil.rmtree('testjobs')
