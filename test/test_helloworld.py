@@ -29,6 +29,7 @@ def test_hello_world():
         )
     assert output.worker_code == 'print("Hello World!")'
 
+
 def test_hello_foo():
     worker_code = (
         'from jdlfactory_server import data\n'
@@ -52,6 +53,7 @@ def test_hello_foo():
 def test_json_encoding_job():
     json_encoded = json.dumps(jdlfactory.Job(dict(foo='bar')), cls=jdlfactory.CustomEncoder)
     assert json.loads(json_encoded) == dict(data=dict(foo='bar'))
+
 
 def test_json_encoding_group():
     group = jdlfactory.Group('print("Hello World!")')
@@ -85,3 +87,16 @@ def test_group_run_locally():
     with capture_stdout() as captured:
         group.run_locally()
     assert captured.getvalue() == 'Hello FOO!\n'
+
+
+def test_venv_plugin_does_not_raise_error():
+    group = jdlfactory.Group('import numpy; print(numpy)')
+    group.add_plugin(jdlfactory.plugins.venv())
+    group.sh('pip install numpy')
+    assert 'pip install numpy' in group.entrypoint().split('\n')
+
+    group = jdlfactory.Group('import numpy; print(numpy)')
+    group.add_plugin(jdlfactory.plugins.venv(py3=True))
+    group.sh('pip install numpy')
+    assert 'python3 -m venv venv' in group.entrypoint().split('\n')
+    assert 'pip install numpy' in group.entrypoint().split('\n')

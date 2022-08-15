@@ -4,6 +4,8 @@ import os, os.path as osp, sys, copy, tempfile, shutil, json, logging
 from contextlib import contextmanager
 from collections import OrderedDict
 
+PY3 = sys.version_info.major == 3
+PY2 = sys.version_info.major == 2
 
 def setup_logger(name='jdlfactory'):
     if name in logging.Logger.manager.loggerDict:
@@ -42,6 +44,7 @@ class Group(object):
             log = "htcondor.log",
             )
         self.jobs = []
+        self.plugins = []
 
     @property
     def njobs(self):
@@ -61,21 +64,34 @@ class Group(object):
         return jdl_str
 
     def entrypoint(self):
-        return (
-            "#!/bin/bash\n"
-            'echo "Redirecting stderr -> stdout from here on out"\n'
-            "exec 2>&1\n"
-            "set -e\n"
-            'echo "hostname: $(hostname)"\n'
-            'echo "date:     $(date)"\n'
-            'echo "pwd:      $(pwd)"\n'
-            'echo "ls -al:"\n'
-            "ls -al\n"
-            "\n"
-            "export VO_CMS_SW_DIR=/cvmfs/cms.cern.ch/\n"
-            "source /cvmfs/cms.cern.ch/cmsset_default.sh\n"
-            "python worker_code.py"
-            )
+        sh = [
+            "#!/bin/bash",
+            'echo "Redirecting stderr -> stdout from here on out"',
+            "exec 2>&1",
+            "set -e",
+            'echo "hostname: $(hostname)"',
+            'echo "date:     $(date)"',
+            'echo "pwd:      $(pwd)"',
+            'echo "Initial ls -al:"',
+            "ls -al",
+            "export VO_CMS_SW_DIR=/cvmfs/cms.cern.ch/",
+            "source /cvmfs/cms.cern.ch/cmsset_default.sh",
+            ]
+        for plugin in self.plugins:
+            sh.append("")
+            sh.extend(plugin.entrypoint())
+        sh.append("")        
+        sh.append("python worker_code.py")
+        return '\n'.join(sh)
+
+    def add_plugin(self, plugin):
+        self.plugins.append(plugin)
+
+    def venv(self, py3=False):
+        self.add_plugin(plugins.venv(py3))
+
+    def sh(self, cmd):
+        self.add_plugin(plugins.command(cmd))
 
     def json(self):
         return json.dumps(self, cls=CustomEncoder)
@@ -165,3 +181,5 @@ class CustomEncoder(json.JSONEncoder):
 
 def produce(worker_code):
     return Group(worker_code)
+
+from . import plugins
