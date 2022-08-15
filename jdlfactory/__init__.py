@@ -106,7 +106,8 @@ class Group(object):
 
     def run_locally(self, ijob=0, keep_temp_dir=True):
         with simulated_job(self, keep_temp_dir, ijob):
-            exec(self.worker_code)
+            namespace = {}
+            exec(self.worker_code, namespace)
 
     def prepare_for_jobs(self, rundir):
         if osp.isdir(rundir):
