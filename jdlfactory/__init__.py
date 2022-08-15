@@ -135,12 +135,13 @@ class Group(object):
 def simulated_job(group, keep_temp_dir=False, ijob=0):
     server_path = osp.join(osp.dirname(osp.abspath(__file__)), 'server')
     try:
-        # Make sure jdlfactory_server is importable
-        old_path = sys.path[:]
-        sys.path.append(server_path)
         # Create the temporary directory representing the workdir of the job
         tmpdir = tempfile.mkdtemp('test')
         logger.info('Simulating job in %s', tmpdir)
+        # Make sure jdlfactory_server is importable
+        old_path = sys.path[:]
+        sys.path.append(server_path)
+        logger.info('Added %s to path', server_path)
         # Create the .job.ad file
         jobad_path = osp.join(tmpdir, '.job.ad')
         with open(jobad_path, 'w') as f:
