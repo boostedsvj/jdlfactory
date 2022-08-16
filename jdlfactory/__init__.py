@@ -14,7 +14,7 @@ def setup_logger(name='jdlfactory'):
     else:
         fmt = logging.Formatter(
             fmt = (
-                '\033[34m[%(asctime)s:%(levelname)s:%(module)s:%(lineno)s]\033[0m'
+                '\033[34m[%(name)s:%(levelname)s:%(asctime)s:%(module)s:%(lineno)s\033[0m]'
                 + ' %(message)s'
                 ),
             datefmt='%Y-%m-%d %H:%M:%S'
