@@ -30,7 +30,7 @@ logger = setup_logger()
 
 class Job(object):
     def __init__(self, data):
-        self.data = data
+        self.data = copy.deepcopy(data)
 
 
 class Group(object):
