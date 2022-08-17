@@ -19,12 +19,27 @@ def capture_stdout():
         sys.stdout = old_stdout
 
 
+def can_import(name):
+    if jdlfactory.PY2:
+        import imp
+        try:
+            imp.find_module(name)
+            return True
+        except ImportError:
+            return False
+    else:
+        import importlib
+        return importlib.util.find_spec(name) is not None
+
+
 def test_hello_world():
-    output = jdlfactory.produce('print("Hello World!")')
+    output = jdlfactory.Group('print("Hello World!")')
     assert output.jdl == (
-        'universe = vanilla\n'
         'executable = entrypoint.sh\n'
-        'transfer_input_files = data.json,entrypoint.sh,worker_code.py\n'
+        'log = htcondor.log\n'
+        'output = out_$(Cluster)_$(Process).txt\n'
+        'transfer_input_files = jdlfactory_server.py,data.json,entrypoint.sh,worker_code.py\n'
+        'universe = vanilla\n'
         'queue 1'
         )
     assert output.worker_code == 'print("Hello World!")'
@@ -40,9 +55,11 @@ def test_hello_foo():
     group.add_job(data=dict(foo='BAR'))
 
     assert group.jdl == (
-        'universe = vanilla\n'
         'executable = entrypoint.sh\n'
-        'transfer_input_files = data.json,entrypoint.sh,worker_code.py\n'
+        'log = htcondor.log\n'
+        'output = out_$(Cluster)_$(Process).txt\n'
+        'transfer_input_files = jdlfactory_server.py,data.json,entrypoint.sh,worker_code.py\n'
+        'universe = vanilla\n'
         'queue 2'
         )
     assert group.worker_code == worker_code
@@ -59,11 +76,13 @@ def test_json_encoding_group():
     group = jdlfactory.Group('print("Hello World!")')
     group.add_job(data=dict(foo='FOO'))
     group.add_job(data=dict(foo='BAR'))
+    group.group_data['mykey'] = 'myvalue'
     json_encoded = json.dumps(group, cls=jdlfactory.CustomEncoder)
     assert json.loads(json_encoded) == dict(
         worker_code = group.worker_code,
-        htcondor_settings = group.htcondor_settings,
-        jobs = [dict(data=dict(foo='FOO')), dict(data=dict(foo='BAR'))]
+        htcondor = group.htcondor,
+        jobs = [dict(data=dict(foo='FOO')), dict(data=dict(foo='BAR'))],
+        group_data = dict(mykey='myvalue')
         )
 
 
@@ -72,7 +91,7 @@ def test_simulated_job():
     group.add_job(data=dict(foo='FOO'))
 
     with jdlfactory.simulated_job(group, keep_temp_dir=False) as tmpdir:
-        import jdlfactory_server
+        can_import('jdlfactory_server')
         assert osp.isfile(osp.join(tmpdir, 'worker_code.py'))
         assert osp.isfile(osp.join(tmpdir, 'data.json'))
 

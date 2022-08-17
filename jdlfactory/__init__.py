@@ -2,7 +2,6 @@ from __future__ import print_function
 
 import os, os.path as osp, sys, copy, tempfile, shutil, json, logging
 from contextlib import contextmanager
-from collections import OrderedDict
 
 PY3 = sys.version_info.major == 3
 PY2 = sys.version_info.major == 2
@@ -36,7 +35,7 @@ class Job(object):
 class Group(object):
     def __init__(self, worker_code):
         self.worker_code = worker_code
-        self.htcondor = OrderedDict(        
+        self.htcondor = dict(
             universe = 'vanilla',
             executable = 'entrypoint.sh',
             transfer_input_files = ['jdlfactory_server.py', 'data.json', 'entrypoint.sh', 'worker_code.py'],
@@ -45,6 +44,7 @@ class Group(object):
             )
         self.jobs = []
         self.plugins = []
+        self.group_data = {}
 
     @classmethod
     def from_file(cls, filename):
@@ -58,7 +58,7 @@ class Group(object):
     @property
     def jdl(self):
         jdl_str = ''
-        for key, value in self.htcondor.items():
+        for key, value in sorted(self.htcondor.items()):
             jdl_str += key + ' = '
             if isinstance(value, str):
                 jdl_str += value
@@ -178,7 +178,8 @@ class CustomEncoder(json.JSONEncoder):
             return dict(
                 worker_code = obj.worker_code,
                 htcondor = obj.htcondor,
-                jobs = [self.default(j) for j in obj.jobs]
+                jobs = [self.default(j) for j in obj.jobs],
+                group_data = obj.group_data
                 )
         elif isinstance(obj, Job):
             return dict(

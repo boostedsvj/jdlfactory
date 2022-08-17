@@ -40,4 +40,6 @@ class DotDict(dict):
     def __init__(self, dct):
         super(DotDict, self).__init__(dct)
         self.__dict__.update(dct)
+
 data = DotDict(group['jobs'][ijob]['data'])
+group_data = DotDict(group['group_data'])

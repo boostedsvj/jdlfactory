@@ -45,9 +45,11 @@ def test_prepare_jobs():
         group.prepare_for_jobs('helloworld')
         with open('helloworld/submit.jdl') as f:
             assert f.read() == (
-                'universe = vanilla\n'
                 'executable = entrypoint.sh\n'
-                'transfer_input_files = data.json,entrypoint.sh,worker_code.py\n'
+                'log = htcondor.log\n'
+                'output = out_$(Cluster)_$(Process).txt\n'
+                'transfer_input_files = jdlfactory_server.py,data.json,entrypoint.sh,worker_code.py\n'
+                'universe = vanilla\n'
                 'queue 1'
                 )
         with open('helloworld/worker_code.py') as f:
