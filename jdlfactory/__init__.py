@@ -104,7 +104,7 @@ class Group(object):
     def add_job(self, data):
         self.jobs.append(Job(data))
 
-    def run_locally(self, ijob=0, keep_temp_dir=True):
+    def run_locally(self, ijob=0, keep_temp_dir=False):
         with simulated_job(self, keep_temp_dir, ijob):
             namespace = {}
             exec(self.worker_code, namespace)
