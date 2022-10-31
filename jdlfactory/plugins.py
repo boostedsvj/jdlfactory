@@ -75,9 +75,16 @@ class venv(Plugin):
                 ]
         # Printout some info for debugging purposes
         sh.extend([
+            'echo "which python:"',
             'which python',
-            'python - V',
+            'echo "python -V:"',
+            'python -V',
+            'echo "which pip:"',
             'which pip',
+            'echo "pip -V:"',
             'pip -V',
+            'echo "PATH: ${PATH}"',
+            'echo "PYTHONPATH: ${PYTHONPATH}"',
+            'echo "PYTHONVERSION: ${PYTHONVERSION}"',
             ])
         return sh
