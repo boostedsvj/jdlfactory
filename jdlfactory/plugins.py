@@ -65,7 +65,8 @@ class venv(Plugin):
                 'export PATH="${HOME}/venv/bin:${PATH}"',
                 'export PYTHONVERSION=$(python -c "import sys; print(\'{}.{}\'.format(sys.version_info.major, sys.version_info.minor))")',
                 'mkdir -p $HOME/venv/lib/python${PYTHONVERSION}/site-packages',
-                'export PYTHONPATH="${HOME}/venv/lib/python${PYTHONVERSION}/site-packages:${PYTHONPATH}"',
+                'mkdir -p $HOME/venv/lib64/python${PYTHONVERSION}/site-packages',
+                'export PYTHONPATH="${HOME}/venv/lib/python${PYTHONVERSION}/site-packages:${HOME}/venv/lib64/python${PYTHONVERSION}/site-packages:${PYTHONPATH}"',
                 # Install pip
                 'echo "Installing pip"',
                 'mkdir tmppipinstalldir; cd tmppipinstalldir',
@@ -75,14 +76,10 @@ class venv(Plugin):
                 ]
         # Printout some info for debugging purposes
         sh.extend([
-            'echo "which python:"',
-            'which python',
-            'echo "python -V:"',
-            'python -V',
-            'echo "which pip:"',
-            'which pip',
-            'echo "pip -V:"',
-            'pip -V',
+            'echo "which python: $(which python)"',
+            'echo "python -V: $(python -V)"',
+            'echo "which python: $(which pip)"',
+            'echo "pip -V: $(pip -V)"',
             'echo "PATH: ${PATH}"',
             'echo "PYTHONPATH: ${PYTHONPATH}"',
             'echo "PYTHONVERSION: ${PYTHONVERSION}"',
