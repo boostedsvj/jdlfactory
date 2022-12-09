@@ -95,6 +95,9 @@ class Group(object):
     def venv(self, py3=False):
         self.add_plugin(plugins.venv(py3))
 
+    def lcg(self, *args, **kwargs):
+        self.add_plugin(plugins.lcg(*args, **kwargs))
+
     def sh(self, cmd):
         self.add_plugin(plugins.command(cmd))
 

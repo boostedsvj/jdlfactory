@@ -19,6 +19,64 @@ class command(Plugin):
         return self.cmds
 
 
+python_env_debug_lines = [
+    'echo ""',
+    'echo "Summary of environment settings:"',
+    'echo "  which python: $(which python)"',
+    'echo "  python -V: $(python -V)"',
+    'echo "  which python: $(which pip)"',
+    'echo "  pip -V: $(pip -V)"',
+    'echo "  PATH: ${PATH}"',
+    'echo "  PYTHONPATH: ${PYTHONPATH}"',
+    'echo "  PYTHONVERSION: ${PYTHONVERSION}"',
+    ]
+
+def create_pip_conf(path='${HOME}/.pip', venv_path='${HOME}/venv'):
+    """
+    Returns shell lines to create a pip.conf file at `path`.
+    """
+    conf_file = path.rstrip('/') + '/pip.conf'
+    return [
+        'echo "Creating .pip configuration file at {}"'.format(conf_file),
+        'mkdir {}'.format(path),
+        'cat <<EOF >> {}'.format(conf_file),
+        # Here the pip settings
+        '[global]',
+        'prefix={}'.format(venv_path),
+        '[install]',
+        'no-cache-dir = true',
+        'ignore-installed = true',
+        # Done
+        'EOF',
+        'echo "Contents of {}:"'.format(conf_file),
+        'cat {}'.format(conf_file),
+        'echo END'
+        ]
+
+def manual_venv(path='${HOME}/venv'):
+    """
+    Creates a directory structure much like how `python -m venv` would create one:
+
+    $HOME/venv/bin
+    $HOME/venv/lib/python3.6/site-packages
+    $HOME/venv/lib64/python3.6/site-packages
+
+    and adds them to the path.
+    Whatever is the current python executable is symlinked in $HOME/venv/bin.
+    """
+    return [
+        'echo "Creating virtual env directory structure at %s and symlinking python"' % path,
+        'mkdir -p %s/bin' % path,
+        'ln -s $(which python) %s/bin/python' % path,
+        'export PYTHONVERSION=$(python -c "import sys; print(\'{}.{}\'.format(sys.version_info.major, sys.version_info.minor))")',
+        'mkdir -p %s/lib/python${PYTHONVERSION}/site-packages' % path,
+        'mkdir -p %s/lib64/python${PYTHONVERSION}/site-packages' % path,
+        # Activate:
+        'export PATH="%s/bin:${PATH}"' % path,
+        'export PYTHONPATH="%s/lib/python${PYTHONVERSION}/site-packages:%s/lib64/python${PYTHONVERSION}/site-packages:${PYTHONPATH}"' % (path, path)
+        ]
+
+
 class venv(Plugin):
     """
     Plugin to setup a virtual python environment in the job before actually
@@ -50,38 +108,39 @@ class venv(Plugin):
             sh = [
                 'echo "Setting up a manual virtual environment for python 2"',
                 'export HOME=$(pwd)',
-                # Create .pip configuration
-                'echo "Creating .pip configuration file"',
-                'mkdir $HOME/.pip',
-                'echo "[global]" >  $HOME/.pip/pip.conf',
-                'echo "prefix=${HOME}/venv" >>  $HOME/.pip/pip.conf',
-                'echo "[install]"  >> $HOME/.pip/pip.conf',
-                'echo "no-cache-dir = true" >> $HOME/.pip/pip.conf',
-                'echo "ignore-installed = true" >> $HOME/.pip/pip.conf',
-                # Setup directory structure, symlink in the python executable, and put it on the PATH
-                'echo "Creating virtual env directory structure and symlinking python"',
-                'mkdir -p $HOME/venv/bin',
-                'ln -s $(which python) ${HOME}/venv/bin/python',
-                'export PATH="${HOME}/venv/bin:${PATH}"',
-                'export PYTHONVERSION=$(python -c "import sys; print(\'{}.{}\'.format(sys.version_info.major, sys.version_info.minor))")',
-                'mkdir -p $HOME/venv/lib/python${PYTHONVERSION}/site-packages',
-                'mkdir -p $HOME/venv/lib64/python${PYTHONVERSION}/site-packages',
-                'export PYTHONPATH="${HOME}/venv/lib/python${PYTHONVERSION}/site-packages:${HOME}/venv/lib64/python${PYTHONVERSION}/site-packages:${PYTHONPATH}"',
-                # Install pip
+                ]
+            sh.extend(create_pip_conf())
+            sh.extend(manual_venv())
+            sh.extend([
+                # Install pip - not available by default on most worker nodes
                 'echo "Installing pip"',
                 'mkdir tmppipinstalldir; cd tmppipinstalldir',
                 'wget https://bootstrap.pypa.io/pip/${PYTHONVERSION}/get-pip.py',
                 'python get-pip.py',
                 'cd $HOME',
-                ]
-        # Printout some info for debugging purposes
-        sh.extend([
-            'echo "which python: $(which python)"',
-            'echo "python -V: $(python -V)"',
-            'echo "which python: $(which pip)"',
-            'echo "pip -V: $(pip -V)"',
-            'echo "PATH: ${PATH}"',
-            'echo "PYTHONPATH: ${PYTHONPATH}"',
-            'echo "PYTHONVERSION: ${PYTHONVERSION}"',
-            ])
+                ])
+        sh.extend(python_env_debug_lines)
+        return sh
+
+
+class lcg(Plugin):
+    """
+    Plugin to start an environment based on the LCG setup scripts.
+    Also sets up a directory structure for a venv.
+    """
+    def __init__(
+        self,
+        lcg_setup_script='/cvmfs/sft.cern.ch/lcg/views/LCG_98python3/x86_64-centos7-gcc9-opt/setup.sh'
+        ):
+        self.lcg_setup_script = lcg_setup_script
+
+    def entrypoint(self):
+        sh = [
+            'echo "Sourcing {}"'.format(self.lcg_setup_script),
+            'source {}'.format(self.lcg_setup_script),
+            'export HOME=$(pwd)'
+            ]
+        sh.extend(create_pip_conf())
+        sh.extend(manual_venv())
+        sh.extend(python_env_debug_lines)
         return sh
