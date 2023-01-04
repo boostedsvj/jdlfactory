@@ -155,7 +155,7 @@ class Group(GroupBase):
 class BashGroup(GroupBase):
     def __init__(self, worker_code):
         super(BashGroup, self).__init__(worker_code)
-        self.htcondor['transfer_input_files'].extend(['script.sh'])
+        self.htcondor['executable'] = 'entrypoint.sh'
 
     def script(self):
         sh = [
