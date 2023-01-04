@@ -155,7 +155,7 @@ class Group(GroupBase):
 class BashGroup(GroupBase):
     def __init__(self, worker_code):
         super(BashGroup, self).__init__(worker_code)
-        self.htcondor['executable'] = 'entrypoint.sh'
+        self.htcondor['executable'] = 'script.sh'
 
     def script(self):
         sh = [
