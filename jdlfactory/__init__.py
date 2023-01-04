@@ -145,7 +145,11 @@ class Group(GroupBase):
 
     def run_locally(self, ijob=0, keep_temp_dir=False):
         with simulated_job(self, keep_temp_dir, ijob) as tmpdir:
-            return subprocess.check_output(['sh', 'entrypoint.sh'.format(tmpdir)])
+            # return subprocess.check_output(['sh', 'entrypoint.sh'.format(tmpdir)])
+            p = subprocess.Popen(['sh', 'entrypoint.sh'.format(tmpdir)], stdout=subprocess.PIPE)
+            while p.poll() is None:
+                logger.info(p.stdout.readline())
+            logger.info(p.stdout.read())
 
 
 class BashGroup(GroupBase):
