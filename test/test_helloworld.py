@@ -38,7 +38,7 @@ def test_hello_world():
         'executable = entrypoint.sh\n'
         'log = htcondor.log\n'
         'output = out_$(Cluster)_$(Process).txt\n'
-        'transfer_input_files = jdlfactory_server.py,data.json,entrypoint.sh,worker_code.py\n'
+        'transfer_input_files = data.json,jdlfactory_server.py,entrypoint.sh,worker_code.py\n'
         'universe = vanilla\n'
         'queue 1'
         )
@@ -58,7 +58,7 @@ def test_hello_foo():
         'executable = entrypoint.sh\n'
         'log = htcondor.log\n'
         'output = out_$(Cluster)_$(Process).txt\n'
-        'transfer_input_files = jdlfactory_server.py,data.json,entrypoint.sh,worker_code.py\n'
+        'transfer_input_files = data.json,jdlfactory_server.py,entrypoint.sh,worker_code.py\n'
         'universe = vanilla\n'
         'queue 2'
         )
@@ -103,9 +103,15 @@ def test_group_run_locally():
         )
     group = jdlfactory.Group(worker_code)
     group.add_job(data=dict(foo='FOO'))
-    with capture_stdout() as captured:
-        group.run_locally()
-    assert captured.getvalue() == 'Hello FOO!\n'
+    stdout = group.run_locally(keep_temp_dir=False)
+    assert stdout.endswith('Hello FOO!\n')
+
+
+def test_bashgroup_run_locally():
+    group = jdlfactory.BashGroup('echo "Hello world!"')
+    group.add_job(data=dict())
+    stdout = group.run_locally(keep_temp_dir=False)
+    assert stdout.endswith('Hello world!\n')
 
 
 def test_venv_plugin_does_not_raise_error():

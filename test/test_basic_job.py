@@ -1,24 +1,7 @@
-import os, os.path as osp, shutil, time, re, subprocess, glob
-from contextlib import contextmanager
+import os, os.path as osp, shutil, time, re, glob
 
 import pytest
 import jdlfactory
-
-@contextmanager
-def capture_stdout():
-    try:
-        import sys
-        if sys.version_info[0] == 2:
-            from cStringIO import StringIO
-        else:
-            from io import StringIO
-        old_stdout = sys.stdout
-        old_stderr = sys.stderr
-        redirected_output = sys.stdout = sys.stderr = StringIO()
-        yield redirected_output
-    finally:
-        sys.stdout = old_stdout
-        sys.stderr = old_stderr
 
 
 def submit(jdl_file, wait=True):
@@ -48,7 +31,7 @@ def test_prepare_jobs():
                 'executable = entrypoint.sh\n'
                 'log = htcondor.log\n'
                 'output = out_$(Cluster)_$(Process).txt\n'
-                'transfer_input_files = jdlfactory_server.py,data.json,entrypoint.sh,worker_code.py\n'
+                'transfer_input_files = data.json,jdlfactory_server.py,entrypoint.sh,worker_code.py\n'
                 'universe = vanilla\n'
                 'queue 1'
                 )
