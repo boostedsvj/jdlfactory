@@ -144,3 +144,29 @@ class lcg(Plugin):
         sh.extend(manual_venv())
         sh.extend(python_env_debug_lines)
         return sh
+
+
+class fix_gfal_env(Plugin):
+    """
+    Fixes the gfal-* command line utilities to the current environment.
+    """
+    def entrypoint(self):
+        # Make copies of environment variables in current state
+        sh = [
+            '#### GFAL ENV FIXES ####',
+            'export GFALPATH=$PATH',
+            'export GFALPYTHONPATH=$PYTHONPATH',
+            'export GFALLD_LIBRARY_PATH=$LD_LIBRARY_PATH',
+            ]
+        # For every gfal-* command line tool, overwrite it with a function:
+        for tool in ['gfal-copy', 'gfal-rm', 'gfal-stat', 'gfal-ls', 'gfal-mkdir', 'gfal-cat']:
+            tool_bin = 'BIN_' + tool.replace('-','').upper()
+            sh.append(
+                'export {1}=$(which {0})\n'
+                '{0}(){{\n'
+                '  unset PYTHONHOME && LD_LIBRARY_PATH=$GFALLD_LIBRARY_PATH && PYTHONPATH=$GFALPYTHONPATH && PATH=$GFALPATH\n'
+                '  ${1} "$@"\n'
+                '  }}\n'
+                .format(tool, tool_bin)
+                )
+        return sh

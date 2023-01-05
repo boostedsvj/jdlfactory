@@ -87,10 +87,14 @@ class GroupBase(object):
         self.add_plugin(plugins.venv(py3))
 
     def lcg(self, *args, **kwargs):
+        self.fix_gfal_env()
         self.add_plugin(plugins.lcg(*args, **kwargs))
 
     def sh(self, cmd):
         self.add_plugin(plugins.command(cmd))
+
+    def fix_gfal_env(self):
+        self.add_plugin(plugins.fix_gfal_env())
 
     def json(self):
         return json.dumps(self, cls=CustomEncoder)
