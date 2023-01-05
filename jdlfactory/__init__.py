@@ -25,6 +25,18 @@ def setup_logger(name='jdlfactory'):
         logger.addHandler(handler)
     return logger
 logger = setup_logger()
+subp_logger = setup_logger('sh')
+subp_logger.handlers[0].formatter._fmt = '\033[35m[%(asctime)s]:\033[0m  %(message)s'
+
+
+def exec_cmd(cmd):
+    """
+    Runs a command and passes the stdout to a logger
+    """
+    p = subprocess.Popen(cmd, stdout=subprocess.PIPE)
+    while p.poll() is None:
+        subp_logger.info(p.stdout.readline().rstrip('\n'))
+    subp_logger.info(p.stdout.read())
 
 
 class Job(object):
@@ -145,11 +157,7 @@ class Group(GroupBase):
 
     def run_locally(self, ijob=0, keep_temp_dir=False):
         with simulated_job(self, keep_temp_dir, ijob) as tmpdir:
-            # return subprocess.check_output(['sh', 'entrypoint.sh'.format(tmpdir)])
-            p = subprocess.Popen(['sh', 'entrypoint.sh'.format(tmpdir)], stdout=subprocess.PIPE)
-            while p.poll() is None:
-                logger.info(p.stdout.readline())
-            logger.info(p.stdout.read())
+            exec_cmd(['sh', 'entrypoint.sh'])
 
 
 class BashGroup(GroupBase):
@@ -185,7 +193,7 @@ class BashGroup(GroupBase):
 
     def run_locally(self, ijob=0, keep_temp_dir=False):
         with simulated_job(self, keep_temp_dir, ijob) as tmpdir:
-            return subprocess.check_output(['sh', 'script.sh'.format(tmpdir)])
+            exec_cmd(['sh', 'script.sh'])
 
 
 @contextmanager
