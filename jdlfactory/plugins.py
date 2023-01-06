@@ -1,3 +1,4 @@
+import os.path as osp
 import jdlfactory
 
 
@@ -37,6 +38,7 @@ def create_pip_conf(path='${HOME}/.pip', venv_path='${HOME}/venv'):
     """
     conf_file = path.rstrip('/') + '/pip.conf'
     return [
+        '',
         'echo "Creating .pip configuration file at {}"'.format(conf_file),
         'mkdir {}'.format(path),
         'cat <<EOF >> {}'.format(conf_file),
@@ -130,18 +132,20 @@ class lcg(Plugin):
     """
     def __init__(
         self,
-        lcg_setup_script='/cvmfs/sft.cern.ch/lcg/views/LCG_98python3/x86_64-centos7-gcc9-opt/setup.sh'
+        lcg_setup_script='/cvmfs/sft.cern.ch/lcg/views/LCG_98python3/x86_64-centos7-gcc9-opt/setup.sh',
+        venv_path='${HOME}/venv',
         ):
         self.lcg_setup_script = lcg_setup_script
+        self.venv_path = venv_path
 
     def entrypoint(self):
         sh = [
+            'export HOME=$(pwd)',
             'echo "Sourcing {}"'.format(self.lcg_setup_script),
             'source {}'.format(self.lcg_setup_script),
-            'export HOME=$(pwd)'
             ]
-        sh.extend(create_pip_conf())
-        sh.extend(manual_venv())
+        sh.extend(create_pip_conf(venv_path=self.venv_path))
+        sh.extend(manual_venv(self.venv_path))
         sh.extend(python_env_debug_lines)
         return sh
 
@@ -150,23 +154,56 @@ class fix_gfal_env(Plugin):
     """
     Fixes the gfal-* command line utilities to the current environment.
     """
+    def __init__(self, path='${PWD}/gfalbins', add_to_path=True, use_osg=False):
+        self.path = path
+        self.add_to_path = add_to_path
+        self.use_osg = use_osg
+
     def entrypoint(self):
         # Make copies of environment variables in current state
         sh = [
+            '',
             '#### GFAL ENV FIXES ####',
-            'export GFALPATH=$PATH',
-            'export GFALPYTHONPATH=$PYTHONPATH',
-            'export GFALLD_LIBRARY_PATH=$LD_LIBRARY_PATH',
+            'mkdir -p {}'.format(self.path),
             ]
+
+        if self.use_osg:
+            # Use a specific, hard-coded environment from the open science grid to run gfal tools
+            osg_env = {
+                'LD_LIBRARY_PATH' : '/cvmfs/oasis.opensciencegrid.org/mis/osg-wn-client/3.6/3.6.230103-1/el7-x86_64/lib64:/cvmfs/oasis.opensciencegrid.org/mis/osg-wn-client/3.6/3.6.230103-1/el7-x86_64/lib:/cvmfs/oasis.opensciencegrid.org/mis/osg-wn-client/3.6/3.6.230103-1/el7-x86_64/usr/lib64:/cvmfs/oasis.opensciencegrid.org/mis/osg-wn-client/3.6/3.6.230103-1/el7-x86_64/usr/lib:/cvmfs/oasis.opensciencegrid.org/mis/osg-wn-client/3.6/3.6.230103-1/el7-x86_64/usr/lib64/dcap:/cvmfs/oasis.opensciencegrid.org/mis/osg-wn-client/3.6/3.6.230103-1/el7-x86_64/usr/lib64/lcgdm',
+                'PYTHONPATH' : '/cvmfs/oasis.opensciencegrid.org/mis/osg-wn-client/3.6/3.6.230103-1/el7-x86_64/usr/lib/python2.7/site-packages:/cvmfs/oasis.opensciencegrid.org/mis/osg-wn-client/3.6/3.6.230103-1/el7-x86_64/usr/lib64/python2.7/site-packages',
+                'PATH' : '/cvmfs/cms.cern.ch/common:/cvmfs/oasis.opensciencegrid.org/mis/osg-wn-client/3.6/3.6.230103-1/el7-x86_64/usr/bin:/cvmfs/oasis.opensciencegrid.org/mis/osg-wn-client/3.6/3.6.230103-1/el7-x86_64/usr/sbin:/cvmfs/cms.cern.ch/common:/usr/local/connect-client/bin:/usr/local/bin:/usr/bin:/usr/local/sbin:/usr/sbin:/opt/puppetlabs/bin:/opt/dell/srvadmin/bin',
+                }
+        else:
+            # Assume current environment variables work for gfal
+            sh.extend([
+                'export GFALPATH=$PATH',
+                'export GFALPYTHONPATH=$PYTHONPATH',
+                'export GFALLD_LIBRARY_PATH=$LD_LIBRARY_PATH',
+                ])
+
         # For every gfal-* command line tool, overwrite it with a function:
         for tool in ['gfal-copy', 'gfal-rm', 'gfal-stat', 'gfal-ls', 'gfal-mkdir', 'gfal-cat']:
-            tool_bin = 'BIN_' + tool.replace('-','').upper()
-            sh.append(
-                'export {1}=$(which {0})\n'
-                '{0}(){{\n'
-                '  unset PYTHONHOME && LD_LIBRARY_PATH=$GFALLD_LIBRARY_PATH && PYTHONPATH=$GFALPYTHONPATH && PATH=$GFALPATH\n'
-                '  ${1} "$@"\n'
-                '  }}\n'
-                .format(tool, tool_bin)
-                )
+            new_bin_file = osp.join(self.path, tool)
+            sh.extend([
+                '',
+                'echo "Creating new bin {} at {}"'.format(tool, new_bin_file),
+                # Now write the contents of the new bin file
+                'cat <<EOF >> {}'.format(new_bin_file),
+                '#!/usr/bin/env bash',
+                'unset PYTHONHOME',
+                # Fix gfal to either the hard-coded osg version, or to the current environment
+                'LD_LIBRARY_PATH=' + (osg_env['LD_LIBRARY_PATH'] if self.use_osg else '$GFALLD_LIBRARY_PATH'),
+                'PYTHONPATH=' + (osg_env['PYTHONPATH'] if self.use_osg else '$GFALPYTHONPATH'),
+                'PATH=' + (osg_env['PATH'] if self.use_osg else '$GFALPATH'),
+                ('/cvmfs/oasis.opensciencegrid.org/mis/osg-wn-client/3.6/3.6.230103-1/el7-x86_64/usr/bin/{} \\$@' if self.use_osg else '$(which {}) \\$@').format(tool),
+                'EOF',
+                # Done
+                'chmod +x {}'.format(new_bin_file),
+                'echo "Contents of {}:"'.format(new_bin_file),
+                'cat {}'.format(new_bin_file),
+                'echo ""',
+                ])
+        if self.add_to_path:
+            sh.append('export PATH="{}:$PATH"'.format(self.path))
         return sh

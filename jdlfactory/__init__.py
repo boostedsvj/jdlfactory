@@ -26,7 +26,7 @@ def setup_logger(name='jdlfactory'):
     return logger
 logger = setup_logger()
 subp_logger = setup_logger('sh')
-subp_logger.handlers[0].formatter._fmt = '\033[35m[%(asctime)s]:\033[0m  %(message)s'
+subp_logger.handlers[0].formatter._fmt = '\033[35m[%(asctime)s]:\033[0m %(message)s'
 
 
 def exec_cmd(cmd):
@@ -87,14 +87,13 @@ class GroupBase(object):
         self.add_plugin(plugins.venv(py3))
 
     def lcg(self, *args, **kwargs):
-        self.fix_gfal_env()
         self.add_plugin(plugins.lcg(*args, **kwargs))
+
+    def fix_gfal_env(self, *args, **kwargs):
+        self.add_plugin(plugins.fix_gfal_env(*args, **kwargs))
 
     def sh(self, cmd):
         self.add_plugin(plugins.command(cmd))
-
-    def fix_gfal_env(self):
-        self.add_plugin(plugins.fix_gfal_env())
 
     def json(self):
         return json.dumps(self, cls=CustomEncoder)
@@ -142,11 +141,12 @@ class Group(GroupBase):
             "ls -al",
             "export VO_CMS_SW_DIR=/cvmfs/cms.cern.ch/",
             "source /cvmfs/cms.cern.ch/cmsset_default.sh",
+            'echo "---------------------------------------------------"'
             ]
         for plugin in self.plugins:
             sh.append("")
             sh.extend(plugin.entrypoint())
-        sh.append("")        
+        sh.append("")
         sh.append("python worker_code.py")
         return '\n'.join(sh)
 
@@ -161,7 +161,7 @@ class Group(GroupBase):
 
     def run_locally(self, ijob=0, keep_temp_dir=False):
         with simulated_job(self, keep_temp_dir, ijob) as tmpdir:
-            exec_cmd(['sh', 'entrypoint.sh'])
+            exec_cmd(['bash', 'entrypoint.sh'])
 
 
 class BashGroup(GroupBase):
@@ -182,6 +182,7 @@ class BashGroup(GroupBase):
             "ls -al",
             "export VO_CMS_SW_DIR=/cvmfs/cms.cern.ch/",
             "source /cvmfs/cms.cern.ch/cmsset_default.sh",
+            'echo "---------------------------------------------------"'
             ]
         for plugin in self.plugins:
             sh.append("")
