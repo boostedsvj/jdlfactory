@@ -34,9 +34,17 @@ def exec_cmd(cmd):
     Runs a command and passes the stdout to a logger
     """
     p = subprocess.Popen(cmd, stdout=subprocess.PIPE)
+    out = ''
     while p.poll() is None:
-        subp_logger.info(p.stdout.readline().rstrip('\n'))
-    subp_logger.info(p.stdout.read())
+        line = p.stdout.readline()
+        if PY3: line = line.decode()
+        subp_logger.info(line.rstrip('\n'))
+        out += line
+    rest = p.stdout.read()
+    if PY3: rest = rest.decode()
+    subp_logger.info(rest)
+    out += rest
+    return out
 
 
 class Job(object):
@@ -161,7 +169,7 @@ class Group(GroupBase):
 
     def run_locally(self, ijob=0, keep_temp_dir=False):
         with simulated_job(self, keep_temp_dir, ijob) as tmpdir:
-            exec_cmd(['bash', 'entrypoint.sh'])
+            return exec_cmd(['bash', 'entrypoint.sh'])
 
 
 class BashGroup(GroupBase):
@@ -198,7 +206,7 @@ class BashGroup(GroupBase):
 
     def run_locally(self, ijob=0, keep_temp_dir=False):
         with simulated_job(self, keep_temp_dir, ijob) as tmpdir:
-            exec_cmd(['sh', 'script.sh'])
+            return exec_cmd(['sh', 'script.sh'])
 
 
 @contextmanager
