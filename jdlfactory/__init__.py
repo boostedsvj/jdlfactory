@@ -78,7 +78,7 @@ class GroupBase(object):
     @property
     def jdl(self):
         jdl_str = ''
-        for key, value in sorted(self.htcondor.items()):
+        for key, value in self.htcondor.items():
             jdl_str += key + ' = '
             if isinstance(value, str):
                 jdl_str += value
